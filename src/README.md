@@ -78,24 +78,3 @@ We can also run the entire package test using:
 colcon test
 colcon test-result --verbose
 ```
-
-- **`Control the Robot`**
-
-Move joints:
-
-ros2 service call /move_joints panda_msgs/srv/MoveJoints "joint_angles_deg: [90, -40 , -114, -130, 147, 132, -146]"
-
-
-Move gripper:
-
-ros2 service call /move_gripper panda_msgs/srv/MoveGripper "position: 0.04"
-
-
-Move to goal:
-
-ros2 service call /move_to_goal panda_msgs/srv/MoveToGoal "{x: 0.5, y: 0.0, z: 0.4, orie_x: 0.0, orie_y: 0.0, orie_z: 0.0, orie_w: 1.0}"
-
-
-Detect objects:
-
-ros2 service call /detect_objects panda_msgs/srv/DetectObject "{}"
