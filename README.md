@@ -32,6 +32,7 @@ mkdir -p colcon_ws/src
 cd colcon_ws/src
 git clone git@github.com:SHARATHNPAYYADI/panda_ws.git
 cd ../
+git submodule init && git submodule update
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
 
