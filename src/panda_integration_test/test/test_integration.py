@@ -1,0 +1,92 @@
+import os
+import sys
+import time
+import unittest
+
+import launch
+import launch_ros
+import launch_testing.actions
+import rclpy
+
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.actions import TimerAction, IncludeLaunchDescription
+import os
+
+from panda_msgs.srv import MoveGripper
+from panda_msgs.srv import MoveJoints
+
+from ament_index_python.packages import get_package_share_directory
+
+def generate_test_description():
+    bringup_dir = get_package_share_directory('panda_bringup')
+    launch_file = os.path.join(bringup_dir, 'launch', 'simple_pick_and_place.launch.py')
+
+    return (
+        launch.LaunchDescription(
+            [
+                # Nodes under test
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(launch_file)
+                ),
+                # Launch tests 0.5 s later
+                launch.actions.TimerAction(
+                    period=10.0, actions=[launch_testing.actions.ReadyToTest()]),
+            ]
+        ), {},
+    )
+
+# Active tests
+class TestPandaSim(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        rclpy.init()
+
+    @classmethod
+    def tearDownClass(cls):
+        rclpy.shutdown()
+
+    def setUp(self):
+        self.node = rclpy.create_node('test_panda_sim')
+
+    def tearDown(self):
+        self.node.destroy_node()
+
+    def test_moving_joints_valid(self, proc_output):
+        """Check if the planner plans and executes the valid plan with joints value"""
+        client = self.node.create_client(MoveJoints, '/move_joints')
+
+        # Wait for the service to exist
+        timeout = time.time() + 15.0
+        while not client.wait_for_service(timeout_sec=1.0):
+            if time.time() > timeout:
+                raise RuntimeError("Service /move_joints did not become available")
+            self.node.get_logger().info("Waiting for /move_joints service...")
+
+        # Prepare request
+        req = MoveJoints.Request()
+        req.joint_angles_deg = [90.0, -40.0 , -114.0, -130.0, 147.0, 132.0, -146.0]   # invalid value
+
+        # Send request
+        future = client.call_async(req)
+
+        # Spin until we get a response (max 5s)
+
+        end_time = time.time() + 20.0
+        while rclpy.ok() and not future.done() and time.time() < end_time:
+            rclpy.spin_once(self.node, timeout_sec=0.1)
+        
+        assert future.done(), "Service call to /move_joints timed out"
+        response = future.result()
+        print("Full response:", response)
+        # **Check that the service correctly passed**
+        assert response.success, "Move Joints service passed with valid joint angles"
+
+# Post-shutdown tests
+@launch_testing.post_shutdown_test()
+class TestPandaSimShutdown(unittest.TestCase):
+    def test_exit_codes(self, proc_info):
+        """Check if the processes exited normally or were killed on shutdown."""
+        launch_testing.asserts.assertExitCodes(
+            proc_info,
+            allowable_exit_codes=[0, -9, -11, -6, -2]  
+        )
