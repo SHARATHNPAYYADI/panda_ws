@@ -28,10 +28,8 @@ A ROS 2 workspace for the **Franka Emika Panda robot**, providing simulation, mo
 
 - **`Clone and build:`**
 ```bash
-mkdir -p colcon_ws/src
-cd colcon_ws/src
 git clone git@github.com:SHARATHNPAYYADI/panda_ws.git
-cd ../
+cd panda_ws/
 git submodule init && git submodule update
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
